@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1B1A20">
+<title>Doodle Royale</title>
+<meta name="description" content="Draw your fighter. Pick three skills. Outlast the chaos. A fast online doodle battle royale.">
+<meta name="theme-color" content="#16151A">
+<meta property="og:title" content="Doodle Royale">
+<meta property="og:description" content="Draw your fighter. Pick three skills. Outlast the chaos.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23FFA45C'/%3E%3Cpath d='M8.5 24l1.7-5.6L21.4 7.2a2.6 2.6 0 0 1 3.7 3.7L13.9 22.1z' fill='%230F0E12'/%3E%3Cpath d='M8.5 24l1.7-5.6 3.9 3.9z' fill='%23FFA45C'/%3E%3C/svg%3E">
+<link rel="preload" href="/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/doodle-theme.css">
+<link rel="preload" href="/fonts/permanent-marker.ttf" as="font" type="font/ttf" crossorigin>
+</head>
+<body class="in-menu">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <filter id="wobble" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.028" numOctaves="2" seed="3" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="4"/></filter>
+  <filter id="wobble2" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.034" numOctaves="2" seed="11" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="4"/></filter>
+</svg>
+<canvas id="bg-cv" aria-hidden="true"></canvas>
+
+<!-- ============================ MENU ============================ -->
+<header id="topbar">
+  <a class="brand" href="/" aria-label="Doodle Royale — home"><span class="brand-mark"></span><span class="brand-text">DOODLE&nbsp;ROYALE</span></a>
+  <nav id="steps" aria-label="Setup steps">
+    <button class="step" data-step="draw"><i>01</i><span>Draw</span></button>
+    <button class="step" data-step="skills"><i>02</i><span>Skills</span></button>
+    <button class="step" data-step="play"><i>03</i><span>Play</span></button>
+  </nav>
+  <div class="top-right">
+    <span id="online" class="chip mono" hidden><span class="dot"></span><b id="online-n">0</b> online</span>
+    <button id="btn-sound" class="icon-btn" aria-label="Toggle sound" title="Sound (M)"></button>
+  </div>
+</header>
+
+<main id="screens">
+  <!-- landing -->
+  <section id="s-landing" class="screen is-active" aria-labelledby="h-landing">
+    <div class="landing-copy">
+      <p class="kicker mono">Online · up to 12 fighters</p>
+      <h1 id="h-landing" class="wordmark"><span class="wm-a">Doodle</span><span>Royale</span></h1>
+      <p class="lede">Draw your fighter. Pick three skills.<br>Your doodle fights on its own. Outlast the chaos.</p>
+      <div class="cta-row">
+        <button class="btn btn-primary btn-lg" id="btn-start"><span>Play now</span><span class="ico-slot" data-icon="right"></span></button>
+        <button class="btn btn-ghost btn-lg" id="btn-quick" hidden><span>Quick play as&nbsp;<b id="quick-name"></b></span></button>
+      </div>
+      <div class="ctl-pick" id="ctl-pick" role="radiogroup" aria-label="Controls">
+        <span class="mono ctl-label">Controls</span>
+        <div class="seg">
+          <button type="button" class="seg-btn" role="radio" data-ctl="kb" aria-checked="false">Keyboard</button>
+          <button type="button" class="seg-btn" role="radio" data-ctl="touch" aria-checked="false">Phone / Touch</button>
+        </div>
+      </div>
+    </div>
+    <ol class="how mono" aria-label="How it works">
+      <li><b>01</b>Draw a fighter</li><li><b>02</b>Pick three skills</li><li><b>03</b>Survive the ink</li>
+    </ol>
+  </section>
+
+  <!-- 1 draw -->
+  <section id="s-draw" class="screen" aria-labelledby="h-draw">
+    <div class="draw-grid">
+      <div class="pad-col">
+        <div class="pad-wrap"><canvas id="pad" aria-label="Drawing pad"></canvas><div class="pad-guide" aria-hidden="true"></div></div>
+        <div class="tools" role="toolbar" aria-label="Drawing tools">
+          <div class="swatches" id="swatches" role="radiogroup" aria-label="Colour"></div>
+          <div class="tool-row">
+            <div class="tool-group" role="radiogroup" aria-label="Brush size">
+              <button class="tool size" data-size="8" aria-label="Thin" title="Thin"><i style="--d:6px"></i></button>
+              <button class="tool size is-on" data-size="14" aria-label="Medium" title="Medium"><i style="--d:10px"></i></button>
+              <button class="tool size" data-size="26" aria-label="Thick" title="Thick"><i style="--d:16px"></i></button>
+            </div>
+            <div class="tool-group" role="radiogroup" aria-label="Tool">
+              <button class="tool is-on" data-tool="brush" aria-label="Brush" title="Brush"></button>
+              <button class="tool" data-tool="fill" aria-label="Fill" title="Fill shape"></button>
+              <button class="tool" data-tool="eraser" aria-label="Eraser" title="Eraser"></button>
+            </div>
+            <div class="tool-group">
+              <button class="tool" id="t-undo" aria-label="Undo" title="Undo (Ctrl/Cmd+Z)"></button>
+              <button class="tool" id="t-clear" aria-label="Clear" title="Clear"></button>
+              <button class="tool wide" id="t-rand" title="Generate a random fighter"><span class="ico-slot" data-icon="dice"></span><span>Surprise me</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <aside class="side-col">
+        <header class="screen-head compact">
+          <p class="kicker mono">Step 1 of 3</p>
+          <h2 id="h-draw">Draw your fighter</h2>
+          <p class="sub">Anything goes. It enters the arena exactly as you draw it.</p>
+        </header>
+        <div class="class-pick" id="class-pick" role="radiogroup" aria-label="Fighter type"></div>
+        <div class="card preview-card"><canvas id="preview" aria-label="In-arena preview"></canvas></div>
+        <p class="hint mono">Live arena preview</p>
+        <p class="tip">Close your shapes, then fill them. A bold outline reads best from far away.</p>
+        <div class="screen-foot inline">
+          <button class="btn btn-ghost" data-go="landing"><span class="ico-slot" data-icon="left"></span><span>Back</span></button>
+          <button class="btn btn-primary" id="to-skills"><span>Continue</span><span class="ico-slot" data-icon="right"></span></button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- 2 skills -->
+  <section id="s-skills" class="screen" aria-labelledby="h-skills">
+    <header class="screen-head">
+      <p class="kicker mono">Step 2 of 3</p>
+      <h2 id="h-skills">Pick three skills</h2>
+      <p class="sub">Your doodle attacks automatically. You time the skills: they bind to <kbd class="bind-0">J</kbd> <kbd class="bind-1">K</kbd> <kbd class="bind-2">L</kbd> in the order you pick them (change keys under Controls).</p>
+    </header>
+    <div class="skill-grid" id="skill-grid" role="group" aria-label="Skills"></div>
+    <footer class="dock">
+      <div class="slots" id="slots" aria-label="Your loadout"></div>
+      <div class="dock-actions">
+        <button class="btn btn-ghost" id="sk-random"><span class="ico-slot" data-icon="dice"></span><span>Random</span></button>
+        <button class="btn btn-ghost" data-go="draw"><span class="ico-slot" data-icon="left"></span><span>Back</span></button>
+        <button class="btn btn-primary" id="to-play" disabled><span>Continue</span><span class="ico-slot" data-icon="right"></span></button>
+      </div>
+    </footer>
+  </section>
+
+  <!-- 3 play -->
+  <section id="s-play" class="screen" aria-labelledby="h-play">
+    <header class="screen-head">
+      <p class="kicker mono">Step 3 of 3</p>
+      <h2 id="h-play">Drop in</h2>
+      <p class="sub">Last fighter standing wins. Bots fill empty slots; real players take their place.</p>
+    </header>
+    <div class="play-grid">
+      <div class="card fighter-card">
+        <canvas id="fighter-prev" aria-label="Your fighter"></canvas>
+        <div class="fighter-meta">
+          <div class="chips" id="pf-skills"></div>
+          <div class="chips" id="pf-class"></div>
+          <button class="link" data-go="draw">Edit fighter</button>
+        </div>
+      </div>
+      <div class="play-form">
+        <label class="field"><span class="mono">Name</span>
+          <input id="in-name" maxlength="14" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Your name"></label>
+        <button id="btn-quickplay" class="btn btn-primary btn-lg"><span>Quick play</span><span class="ico-slot" data-icon="right"></span></button>
+        <div class="divider mono"><span>or play with friends</span></div>
+        <div class="room-row">
+          <input id="in-room" maxlength="10" autocomplete="off" spellcheck="false" placeholder="Room code" aria-label="Room code">
+          <button id="btn-join-room" class="btn btn-secondary">Join</button>
+          <button id="btn-new-room" class="btn btn-secondary">Create</button>
+        </div>
+        <p id="play-error" class="error" role="alert" hidden></p>
+        <dl class="controls-help controls-touch" hidden>
+          <div><dt><kbd>Drag</kbd></dt><dd>Touch anywhere and drag to move</dd></div>
+          <div><dt><kbd>Auto</kbd></dt><dd>Your doodle attacks the nearest foe</dd></div>
+          <div><dt><kbd>Tap</kbd></dt><dd>The three skill buttons, bottom right</dd></div>
+          <div><dt><kbd>Tip</kbd></dt><dd>Landscape gives the most room</dd></div>
+        </dl>
+        <dl class="controls-help controls-kb">
+          <div><dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>Move</dd></div>
+          <div><dt><kbd>Auto</kbd></dt><dd>Attacks the nearest foe</dd></div>
+          <div><dt id="bind-row"><button class="kbind" data-i="0" type="button">J</button><button class="kbind" data-i="1" type="button">K</button><button class="kbind" data-i="2" type="button">L</button></dt><dd>Skills <button class="linklike" id="bind-reset" type="button" hidden>reset</button><span class="bind-hint" id="bind-hint">click a key to change</span></dd></div>
+          <div><dt><kbd>M</kbd></dt><dd>Mute</dd></div>
+                  </dl>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ============================ GAME ============================ -->
+<div id="game" hidden>
+  <canvas id="cv"></canvas>
+  <div id="edge" aria-hidden="true"></div>
+  <div id="touch" aria-hidden="true"></div>
+
+  <div id="hud">
+    <div class="hud-tl"><div id="feed" aria-live="polite"></div></div>
+
+    <div class="hud-tc">
+      <div class="pill" id="pill-alive"><span class="ico-slot" data-icon="users"></span><b id="n-alive">12</b><span class="mono">alive</span></div>
+      <div class="pill" id="pill-zone"><span class="ico-slot" data-icon="zone"></span><span class="mono" id="zone-label">Ink</span><b id="zone-time" class="mono">0:00</b></div>
+      <div class="pill" id="pill-kills"><span class="ico-slot" data-icon="target"></span><b id="n-kills">0</b></div>
+      <div class="pill pill-lv" id="pill-lv" title="Level: kills make you stronger"><span class="lvtag">LV</span><b id="n-lv">1</b></div>
+    </div>
+
+    <div class="hud-tr">
+      <div class="hud-btns">
+        <button id="btn-mute" class="icon-btn" aria-label="Toggle sound"></button>
+        <button id="btn-leave" class="icon-btn" aria-label="Leave match"></button>
+      </div>
+      <canvas id="mm" aria-label="Minimap"></canvas>
+    </div>
+
+    <div class="hud-bc">
+      <div id="buffs"></div>
+      <div class="hp" aria-label="Health"><div id="hp-fill"></div><div id="hp-shield"></div><span class="hp-text mono"><span id="hp-n">100</span></span></div>
+      <div class="skills" id="skill-bar"></div>
+    </div>
+    <div id="slam" aria-live="assertive"></div>
+    <div id="toasts" aria-live="polite"></div>
+    <div id="spec-bar" class="pill" hidden><span class="ico-slot" data-icon="eye"></span><span class="mono">Spectating</span><b id="spec-name">—</b><span class="mono hint">← → switch</span></div>
+  </div>
+
+  <div id="ov-lobby" class="ov-card" hidden>
+    <p class="kicker mono" id="lobby-kicker">Warm-up</p>
+    <div class="lobby-count mono"><span id="lobby-n">15</span></div>
+    <p class="sub" id="lobby-sub">Match starts soon. Try your skills.</p>
+    <div class="lobby-actions">
+      <button class="btn btn-primary" id="btn-ready"><span class="ico-slot" data-icon="check"></span><span>Ready</span></button>
+      <button class="btn btn-ghost" id="btn-invite" hidden><span class="ico-slot" data-icon="link"></span><span id="invite-label">Copy invite</span></button>
+    </div>
+  </div>
+
+  <div id="ov-dead" class="ov-modal" hidden>
+    <div class="modal-card">
+      <p class="kicker mono">Eliminated</p>
+      <h2 class="big" id="dead-place">#5</h2>
+      <p class="sub" id="dead-by">Swallowed by The Ink</p>
+      <dl class="stats">
+        <div><dd id="st-kills">0</dd><dt class="mono">Eliminations</dt></div>
+        <div><dd id="st-dmg">0</dd><dt class="mono">Damage</dt></div>
+        <div><dd id="st-time">0:00</dd><dt class="mono">Survived</dt></div>
+      </dl>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="dead-spectate"><span class="ico-slot" data-icon="eye"></span><span>Spectate</span></button>
+        <button class="btn btn-ghost" id="dead-leave"><span class="ico-slot" data-icon="out"></span><span>Menu</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="ov-over" class="ov-modal" hidden>
+    <div class="modal-card wide">
+      <p class="kicker mono" id="over-kicker">Match over</p>
+      <h2 class="big" id="over-title">Victory Royale</h2>
+      <p class="sub" id="over-sub"></p>
+      <ol class="board" id="over-board"></ol>
+      <p class="mono hint" id="over-next">Next round soon</p>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="over-again"><span>Keep playing</span><span class="ico-slot" data-icon="right"></span></button>
+        <button class="btn btn-ghost" id="over-menu"><span class="ico-slot" data-icon="out"></span><span>Change loadout</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="ov-conn" class="ov-modal" hidden>
+    <div class="modal-card">
+      <p class="kicker mono">Connection</p>
+      <h2 class="big small" id="conn-title">Connection lost</h2>
+      <p class="sub" id="conn-sub">The server stopped responding.</p>
+      <div class="modal-actions"><button class="btn btn-primary" id="conn-menu"><span>Back to menu</span></button><button class="btn btn-ghost" id="conn-resume" hidden><span>Resume</span></button></div>
+    </div>
+  </div>
+</div>
+
+<script src="/shared.js"></script>
+<script src="/js/art.js"></script>
+<script src="/js/doodle.js"></script>
+<script src="/js/audio.js"></script>
+<script src="/js/game.js"></script>
+<script src="/js/render.js"></script>
+<script src="/js/hud.js"></script>
+<script src="/js/ui.js"></script>
+</body>
+</html>

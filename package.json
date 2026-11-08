@@ -1,0 +1,23 @@
+{
+  "name": "doodle-royale",
+  "version": "1.0.0",
+  "description": "Draw your fighter. Pick three skills. Outlast everyone. Online top-down doodle battle royale.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node test/rules.js && node test/smoke.js",
+    "test:rules": "node test/rules.js",
+    "test:smoke": "node test/smoke.js",
+    "bots": "node test/bot-client.js",
+    "test:ui": "node test/ui-shot.js",
+    "test:load": "node test/load.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
