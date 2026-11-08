@@ -70,14 +70,14 @@ const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJA
   while ((Date.now() - t0) / 1000 < SECS) {
     await sleep(2000);
     try { const s = await get('/api/stats'), [c, rss] = cpu(); s.cpu = c; s.rssKB = rss; samples.push(s); maxOnline = Math.max(maxOnline, s.online);
-      if (samples.length % 5 === 0) console.log(`  t=${String(Math.round((Date.now() - t0) / 1000)).padStart(3)}s online=${String(s.online).padStart(3)} rooms=${s.rooms} fighters=${s.fighters} enemies=${s.enemies} tick p99=${s.tickMs.p99}ms max=${s.tickMs.max}ms lag p99=${s.loopLagMs.p99}ms cpu=${c}% rss=${s.memMB.rss}MB out=${s.outKBps}KB/s`);
+      if (samples.length % 10 === 0) console.log(`  t=${String(Math.round((Date.now() - t0) / 1000)).padStart(3)}s online=${String(s.online).padStart(3)} rooms=${s.rooms} fighters=${s.fighters} enemies=${s.enemies} tick p99=${s.tickMs.p99}ms max=${s.tickMs.max}ms lag p99=${s.loopLagMs.p99}ms cpu=${c}% rss=${s.memMB.rss}MB heap=${s.memMB.heap}MB out=${s.outKBps}KB/s`);
     } catch (e) { samples.push(null); console.log('  stats request failed', e.message); }
   }
   stop = true; await sleep(1200);
   const last = samples.filter(Boolean).slice(-1)[0] || {}, ok = samples.filter(Boolean);
   const early = ok.slice(2, 8), late = ok.slice(-6), avg = (a, f) => a.reduce((x, s) => x + f(s), 0) / (a.length || 1);
   const peakCpu = Math.max(...ok.map(s => s.cpu)), avgCpu = avg(ok, s => s.cpu);
-  const growth = ok.length > 10 ? avg(late, s => s.memMB.rss) - avg(early, s => s.memMB.rss) : 0;
+  const growth = ok.length > 10 ? avg(late, s => s.memMB.heap) - avg(early, s => s.memMB.heap) : 0;
   const healthy = await get('/healthz').then(() => true, () => false);
   const rep = {
     peakOnline: last.peakOnline, rooms: last.rooms, tickMs: last.tickMs, slowTicks: last.slowTicks, loopLagMs: last.loopLagMs, roomErrors: last.roomErrors,
@@ -92,7 +92,7 @@ const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJA
     ['tick p99 under half the 25 ms budget', last.tickMs && last.tickMs.p99 < 12.5, last.tickMs && last.tickMs.p99 + ' ms'],
     ['no tick overran its budget', rep.slowTicks === 0, rep.slowTicks + ' slow'],
     ['event-loop lag p99 < 60 ms', last.loopLagMs && last.loopLagMs.p99 < 60, last.loopLagMs && last.loopLagMs.p99 + ' ms'],
-    ['memory growth < 60 MB over the run', growth < 60, growth.toFixed(1) + ' MB'],
+    ['heap growth < 40 MB over the run (no leak)', growth < 40, growth.toFixed(1) + ' MB'],
     ['matches completed repeatedly', counters.over > 0, counters.over + ' over msgs'],
   ];
   let bad = 0; for (const [n, v, d] of checks) { console.log(`${v ? 'PASS' : 'FAIL'}  ${n}${d ? '  (' + d + ')' : ''}`); if (!v) bad++; }
