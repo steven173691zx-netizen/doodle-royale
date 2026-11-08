@@ -15,6 +15,17 @@ The server prints a `network` URL too, so anyone on the same Wi-Fi can join. For
 
 * **Quick play** drops you into the next open public arena. **Create** makes a private room code (`/?room=ABCD`). Up to 16 humans per room.
 
+## Phone / touch
+
+Pick **Controls: Phone / Touch** on the main menu (it is chosen automatically on touch devices). Drag anywhere to move, your doodle attacks on its own, tap the three skill buttons. Landscape gives the most room.
+
+## Deploy
+
+* **Docker:** `docker build -t doodle-royale . && docker run -p 3000:3000 doodle-royale`
+* **Render (free, one click):** https://render.com/deploy?repo=https://github.com/steven173691zx-netizen/doodle-royale (uses `render.yaml`).
+* Anything that runs Node 18+ works: `npm ci --omit=dev && node server.js` (reads `PORT`; WebSockets on `/ws`; health check `/healthz`; live metrics `/api/stats`).
+* One process holds all rooms in memory, so run a single instance.
+
 ## How it plays
 
 * **Fighter type** (chosen on the Draw screen): **Swordsman** (short range; every swing hits what is in front, cuts enemy shots, +20 HP), **Gunner** (mid range; rapid small bullets) or **Sniper** (long range; heavy bullets, slower fire). Gunner and Sniper bullets fly at the same speed.
@@ -59,6 +70,7 @@ public/css/          style.css (layout) + doodle-theme.css (sketchbook skin)
 ```bash
 npm test             # 84 rule checks + 33 real-WebSocket smoke checks
 npm run test:ui      # headless Chrome playthrough (needs the server running)
+npm run test:load    # ~100 simulated players + churn + hostile clients; reports tick time, lag, memory, CPU
 node test/ui-scene.js --out /tmp/scenes   # staged scene screenshots
 ```
 
