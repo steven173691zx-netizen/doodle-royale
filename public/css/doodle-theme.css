@@ -179,3 +179,25 @@ kbd, .kbind { font-family: var(--marker); font-weight: 400; font-size: 12px; bor
 .ctl-pick .seg-btn { padding: 9px 16px; white-space: nowrap; }
 body.touch .controls-kb { display: none; }
 body.touch #hud { -webkit-touch-callout: none; }
+
+/* custom rooms: create panel, room code, host controls */
+.create-panel { margin-top: 14px; padding: 16px 18px 18px; background: var(--paper-2); border-radius: var(--r-a); box-shadow: 5px 6px 0 var(--ink); position: relative; display: grid; gap: 12px; transform: rotate(-.4deg); }
+.create-panel::before { content: ''; position: absolute; inset: 0; border: 2.5px dashed rgba(242,240,232,.5); border-radius: inherit; filter: url(#wobble); pointer-events: none; }
+.step-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.step-row .lbl { font-family: var(--marker); font-size: 18px; color: var(--chalk); }
+.stepper { display: inline-flex; align-items: center; gap: 10px; }
+.stepper b { font-family: var(--marker); font-weight: 400; font-size: 26px; min-width: 2ch; text-align: center; color: var(--accent); text-shadow: 2px 2px 0 var(--ink); }
+.stepper button { width: 38px; height: 38px; border: 2.5px solid var(--chalk); border-radius: 12px 15px 11px 16px; background: var(--s3); color: var(--chalk); font-family: var(--marker); font-size: 22px; line-height: 1; cursor: pointer; box-shadow: 2px 3px 0 var(--ink); transition: transform .15s var(--ease), background .15s var(--ease); }
+.stepper button:hover:not(:disabled) { background: var(--accent); color: var(--ink); transform: rotate(-4deg); }
+.stepper button:active:not(:disabled) { transform: translate(2px, 3px); box-shadow: 0 0 0 var(--ink); }
+.stepper button:disabled { opacity: .3; cursor: default; }
+.create-panel .sub { font-size: 14px; }
+.room-code { font-family: var(--marker); font-size: clamp(54px, 9vw, 76px); letter-spacing: .12em; color: var(--accent); text-shadow: 4px 4px 0 var(--ink); margin: 2px 0 4px; cursor: pointer; line-height: 1; user-select: all; transform: rotate(-1.5deg); padding-left: .12em; }
+.room-code:hover { color: #FFB777; }
+.host-cfg { display: grid; gap: 8px; margin: 10px 0 4px; padding: 10px 14px; border: 2px dashed rgba(242,240,232,.3); border-radius: 14px 18px 13px 17px; }
+#ov-lobby { width: min(420px, calc(100vw - 32px)); }
+
+#ov-lobby .lobby-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+#ov-lobby .lobby-actions .btn { width: 100%; min-width: 0; padding: 0 12px; white-space: nowrap; }
+#ov-lobby #btn-start-match, #ov-lobby #btn-ready { grid-column: 1 / -1; }
+#ov-lobby #btn-invite:only-of-type, #ov-lobby .lobby-actions > .btn:last-child:nth-child(odd) { grid-column: 1 / -1; }

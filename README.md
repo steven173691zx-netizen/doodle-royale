@@ -13,7 +13,8 @@ npm start            # http://localhost:3000
 On macOS, double-click **Doodle Royale.app** on the Desktop: it starts the server if needed and opens the game.
 The server prints a `network` URL too, so anyone on the same Wi-Fi can join. For the internet, deploy it or tunnel the port (`cloudflared tunnel --url http://localhost:3000`).
 
-* **Quick play** drops you into the next open public arena. **Create** makes a private room code (`/?room=ABCD`). Up to 16 humans per room.
+* **Quick play** drops you into the next open public arena (automatic start, bots fill up to 12).
+* **Create** opens a custom room and you are the **host**: choose how many **players** (1 to 12) and how many **CPUs** (0 to 12, at most 16 fighters in total). You get a 4-letter **room code** (also a share link, `/?room=ABCD`). Nothing starts automatically: the host presses **Start match**, and can still change players/CPUs in the lobby. If the host leaves, the next player becomes host. Others type the code under **Join**.
 
 ## Phone / touch
 
@@ -68,7 +69,7 @@ public/css/          style.css (layout) + doodle-theme.css (sketchbook skin)
 ## Tests
 
 ```bash
-npm test             # 84 rule checks + 33 real-WebSocket smoke checks
+npm test             # rule checks + real-WebSocket smoke checks + custom-room checks
 npm run test:ui      # headless Chrome playthrough (needs the server running)
 npm run test:load    # ~100 simulated players + churn + hostile clients; reports tick time, lag, memory, CPU
 node test/ui-scene.js --out /tmp/scenes   # staged scene screenshots

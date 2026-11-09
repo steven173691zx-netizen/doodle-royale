@@ -148,7 +148,14 @@
         <div class="room-row">
           <input id="in-room" maxlength="10" autocomplete="off" spellcheck="false" placeholder="Room code" aria-label="Room code">
           <button id="btn-join-room" class="btn btn-secondary">Join</button>
-          <button id="btn-new-room" class="btn btn-secondary">Create</button>
+          <button id="btn-new-room" class="btn btn-secondary" aria-expanded="false">Create</button>
+        </div>
+        <div class="create-panel" id="create-panel" hidden>
+          <p class="mono kicker">New room: you are the host</p>
+          <div class="step-row"><span class="lbl">Players</span><div class="stepper" data-k="players"><button type="button" data-d="-1" aria-label="Fewer players">&minus;</button><b id="cr-players">8</b><button type="button" data-d="1" aria-label="More players">+</button></div></div>
+          <div class="step-row"><span class="lbl">CPU</span><div class="stepper" data-k="bots"><button type="button" data-d="-1" aria-label="Fewer CPUs">&minus;</button><b id="cr-bots">4</b><button type="button" data-d="1" aria-label="More CPUs">+</button></div></div>
+          <p class="sub" id="cr-sum">Up to 12 fighters. You start the match when everyone is in.</p>
+          <button id="btn-create-go" class="btn btn-primary"><span>Create room</span><span class="ico-slot" data-icon="right"></span></button>
         </div>
         <p id="play-error" class="error" role="alert" hidden></p>
         <dl class="controls-help controls-touch" hidden>
@@ -204,10 +211,21 @@
 
   <div id="ov-lobby" class="ov-card" hidden>
     <p class="kicker mono" id="lobby-kicker">Warm-up</p>
-    <div class="lobby-count mono"><span id="lobby-n">15</span></div>
+    <div class="lobby-count mono" id="lobby-count-wrap"><span id="lobby-n">15</span></div>
+    <div id="room-box" hidden>
+      <p class="mono hint">Room code</p>
+      <div class="room-code" id="room-code" title="Click to copy">ABCD</div>
+      <p class="sub" id="room-who">1 / 8 players · 4 CPU</p>
+      <div class="host-cfg" id="host-cfg" hidden>
+        <div class="step-row"><span class="lbl">Players</span><div class="stepper" data-k="players"><button type="button" data-d="-1" aria-label="Fewer players">&minus;</button><b id="hc-players">8</b><button type="button" data-d="1" aria-label="More players">+</button></div></div>
+        <div class="step-row"><span class="lbl">CPU</span><div class="stepper" data-k="bots"><button type="button" data-d="-1" aria-label="Fewer CPUs">&minus;</button><b id="hc-bots">4</b><button type="button" data-d="1" aria-label="More CPUs">+</button></div></div>
+      </div>
+    </div>
     <p class="sub" id="lobby-sub">Match starts soon. Try your skills.</p>
     <div class="lobby-actions">
+      <button class="btn btn-primary" id="btn-start-match" hidden><span class="ico-slot" data-icon="right"></span><span>Start match</span></button>
       <button class="btn btn-primary" id="btn-ready"><span class="ico-slot" data-icon="check"></span><span>Ready</span></button>
+      <button class="btn btn-ghost" id="btn-copy-code" hidden><span class="ico-slot" data-icon="link"></span><span id="copy-code-label">Copy code</span></button>
       <button class="btn btn-ghost" id="btn-invite" hidden><span class="ico-slot" data-icon="link"></span><span id="invite-label">Copy invite</span></button>
     </div>
   </div>

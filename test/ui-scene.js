@@ -56,7 +56,7 @@ const getJSON = (u) => new Promise((res, rej) => http.get(u, r => { let b = ''; 
     window.__bindTest = { def, after, saved: localStorage.getItem('dr.keys') };
     document.getElementById('bind-reset').click();
     const i = $('#in-name'); i.value = 'Nave'; i.dispatchEvent(new Event('input', { bubbles: true }));
-    $('#in-room').value = 'QA' + Math.floor(Math.random() * 9999); click('#btn-join-room');
+    click('#btn-quickplay');
     for (let t = 0; t < 40 && !(window.__dr && __dr.G.running); t++) await sl(200);
     return !!(window.__dr && __dr.G.running);
   })()`, true);

@@ -16,7 +16,7 @@ const root = path.join(__dirname, '..');
 const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
 
 (async () => {
-  const server = spawn('node', ['server.js'], { cwd: root, env: Object.assign({}, process.env, { PORT, LOBBY_SECONDS: 6, OVER_SECONDS: 5, ZONE_SCALE: 0.4 }), stdio: ['ignore', 'pipe', 'pipe'] });
+  const server = spawn('node', ['server.js'], { cwd: root, env: Object.assign({}, process.env, { PORT, DR_OPEN_ROOMS: '1', LOBBY_SECONDS: 6, OVER_SECONDS: 5, ZONE_SCALE: 0.4 }), stdio: ['ignore', 'pipe', 'pipe'] });
   let serverLog = ''; server.stdout.on('data', d => serverLog += d); server.stderr.on('data', d => serverLog += d);
   for (let i = 0; i < 50; i++) { try { await get('/healthz'); break; } catch (e) { await sleep(100); } }
   const kids = [], counters = { joined: 0, over: 0, steadyErrors: 0 };

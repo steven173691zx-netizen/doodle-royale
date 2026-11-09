@@ -25,6 +25,8 @@
     MAX_FIGHTERS: 12,
     SPAWN_PROT: 4,
     MAX_HUMANS: 16,
+    ROOM_MAX_TOTAL: 16,        // custom rooms: players + CPUs
+    ROOM_MAX_PLAYERS: 12,
     LOBBY_SECONDS: 15,
     OVER_SECONDS: 10,
     NAME_MAX: 14,

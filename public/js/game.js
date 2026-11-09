@@ -30,7 +30,7 @@ const Game = (() => {
     seq: 0, pending: [], outbox: [], lastSend: 0, acc: 0, rtt: 0,
     snaps: [], last: null, offset: null, projD: new Map(),
     fx: [], texts: [], feed: [], cam: { x: 0, y: 0, shake: 0, flash: 0, zoom: 0, white: 0 }, lastTs: 0,
-    decals: [], cls: 'gun', lvPop: new Map(), lvl: 1, rebind: null, recoil: new Map(), hz: [], hzSeen: new Set(), deathHold: null, slow: 0, slowK: 0.3, streak: { n: 0, t: 0 }, celebrate: 0, autoTgt: null, hpd: new Map(),
+    decals: [], room: { m: 0 }, cls: 'gun', lvPop: new Map(), lvl: 1, rebind: null, recoil: new Map(), hz: [], hzSeen: new Set(), deathHold: null, slow: 0, slowK: 0.3, streak: { n: 0, t: 0 }, celebrate: 0, autoTgt: null, hpd: new Map(),
     input: { keys: {}, castQ: [], aim: 0, mx: 0, my: 0, touch: null },
     dead: null, over: null, hooks: {}, hitFlash: new Map(), face: new Map(), spawnAt: new Map(), t0: 0,
     lastZoneMode: -1, lastStage: -1, lobbyTick: -1,
@@ -63,7 +63,7 @@ const Game = (() => {
   /* ------------------------------------------------------------------ network */
   function wsURL() { return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws'; }
 
-  function join({ name, img, skills, room, sprite, cls }) {
+  function join({ name, img, skills, room, sprite, cls, create }) {
     return new Promise((resolve, reject) => {
       reset();
       G.skills = skills; G.mySprite = sprite || null; G.cls = cls || 'gun';
@@ -72,7 +72,7 @@ const Game = (() => {
       G.ws = ws;
       const fail = (msg) => { if (!settled) { settled = true; reject(new Error(msg)); try { ws.close(); } catch (e) {} } };
       const timer = setTimeout(() => fail('Could not reach the server.'), 8000);
-      ws.onopen = () => { G.open = true; ws.send(JSON.stringify({ t: 'join', name, img, skills, cls: cls || 'gun', room: room || '' })); };
+      ws.onopen = () => { G.open = true; ws.send(JSON.stringify({ t: 'join', name, img, skills, cls: cls || 'gun', room: room || '', create: create || undefined })); };
       ws.onerror = () => fail('Connection failed.');
       ws.onclose = () => {
         const wasRunning = G.running; G.open = false;
@@ -89,7 +89,7 @@ const Game = (() => {
   }
 
   function onHello(m) {
-    G.id = m.id; G.code = m.code; G.phase = m.ph; G.queued = !!m.queued; G.lobbyT = m.lt;
+    G.room = m.ri || { m: 0 }; G.id = m.id; G.code = m.code; G.phase = m.ph; G.queued = !!m.queued; G.lobbyT = m.lt;
     G.obs = m.obs.map(o => ({ x: o[0], y: o[1], r: o[2], g: o[3], i: o[4], hp: (o[5] || 100) / 100, hit: 0 }));
     m.roster.forEach(ensureRoster);
     G.running = true; G.lastTs = performance.now(); G.t0 = performance.now();
@@ -100,12 +100,15 @@ const Game = (() => {
 
   let pingTimer = null;
   function pingLoop() { clearInterval(pingTimer); pingTimer = setInterval(() => send({ t: 'ping', n: performance.now() | 0 }), 2000); }
+  const startMatch = () => send({ t: 'start' });
+  const configRoom = (players, bots) => send({ t: 'cfg', players, bots });
   function send(o) { if (G.ws && G.ws.readyState === 1) G.ws.send(JSON.stringify(o)); }
 
   function onMessage(m) {
     switch (m.t) {
       case 's': onSnap(m); break;
       case 'roster': m.add.forEach(ensureRoster); break;
+      case 'room': G.room = m; if (G.hooks.room) G.hooks.room(m); break;
       case 'rm': m.ids.forEach(id => G.roster.delete(id)); break;
       case 'phase': onPhase(m); break;
       case 'over': G.over = m; if (G.hooks.over) G.hooks.over(m); break;
@@ -609,7 +612,7 @@ const Game = (() => {
   }
 
   return {
-    G, getBinds, setBind, resetBinds, keyLabel, join, leave, send, update, collect, bindInput, bindTouch, queueCast, whiteOf, nameOf, ensureRoster, celebrate, onEvent,
+    G, startMatch, configRoom, getBinds, setBind, resetBinds, keyLabel, join, leave, send, update, collect, bindInput, bindTouch, queueCast, whiteOf, nameOf, ensureRoster, celebrate, onEvent,
     ready: () => send({ t: 'ready' }), spectate: (d) => send({ t: 'spec', d }),
     puff, ring, text, CLOUD_COL, SELF_COLOR, OTHER_COLORS,
   };

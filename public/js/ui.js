@@ -8,7 +8,7 @@ const UI = (() => {
   const MIGRATE = { sbd: 'vanish', squeak: 'slap' };
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const ORDER = ['jet', 'burst', 'flame', 'bomb', 'boom', 'slap', 'vanish', 'bubble'];
-  const S = { step: 'landing', cls: 'gun', skills: [], name: '', sprite: null, sticker: null, pad: null, invite: '', busy: false, dirty: true };
+  const S = { step: 'landing', create: { players: 8, bots: 4 }, cls: 'gun', skills: [], name: '', sprite: null, sticker: null, pad: null, invite: '', busy: false, dirty: true };
   let last = 0;
 
   /* ------------------------------------------------------------------ persistence */
@@ -148,14 +148,14 @@ const UI = (() => {
     if (S.invite) $('#in-room').value = S.invite;
   }
   function showError(msg) { const e = $('#play-error'); e.textContent = msg; e.hidden = !msg; }
-  async function start(room) {
+  async function start(room, create) {
     if (S.busy) return; showError('');
     S.name = $('#in-name').value.trim().slice(0, 14) || S.name || 'Anonymous'; save();
     Sfx.init(); S.busy = true;
     $$('#s-play .btn, #btn-quick').forEach(b => { b.disabled = true; });
     try {
-      await Game.join({ name: S.name, img: Doodle.spriteURL(S.sprite), skills: S.skills.slice(), cls: S.cls, room, sprite: S.sprite });
-      enterGame(room);
+      await Game.join({ name: S.name, img: Doodle.spriteURL(S.sprite), skills: S.skills.slice(), cls: S.cls, room, create, sprite: S.sprite });
+      enterGame(create ? G.code : room);
     } catch (e) { if (S.step === 'landing') go('play'); showError(e.message || 'Could not connect.'); }
     finally { S.busy = false; $$('#s-play .btn, #btn-quick').forEach(b => { b.disabled = false; }); }
   }
@@ -250,6 +250,20 @@ const UI = (() => {
     $$('#ctl-pick .seg-btn').forEach(b => b.addEventListener('click', () => { applyControls(b.dataset.ctl, true); Sfx.play('ui'); }));
   }
 
+  /* ------------------------------------------------------------------ create-room panel */
+  function syncCreate() {
+    const c = S.create, ok = (k, d) => k === 'players' ? c.players + d >= 1 && c.players + d <= 12 && c.players + d + c.bots <= 16 : c.bots + d >= 0 && c.players + c.bots + d <= 16;
+    $('#cr-players').textContent = c.players; $('#cr-bots').textContent = c.bots;
+    $('#cr-sum').textContent = `Up to ${c.players + c.bots} fighters (${c.players} players + ${c.bots} CPU). You start the match when everyone is in.`;
+    $$('#create-panel .stepper').forEach(s => s.querySelectorAll('button').forEach(b => { b.disabled = !ok(s.dataset.k, +b.dataset.d); }));
+  }
+  function initCreate() {
+    try { const d = JSON.parse(localStorage.getItem('dr.create') || 'null'); if (d && d.players >= 1 && d.players <= 12 && d.bots >= 0 && d.players + d.bots <= 16) S.create = { players: d.players | 0, bots: d.bots | 0 }; } catch (e) {}
+    $$('#create-panel .stepper button').forEach(b => b.addEventListener('click', () => { const k = b.closest('.stepper').dataset.k; S.create[k] += +b.dataset.d; syncCreate(); Sfx.play('ui'); }));
+    $('#btn-create-go').addEventListener('click', () => { try { localStorage.setItem('dr.create', JSON.stringify(S.create)); } catch (e) {} start('', { players: S.create.players, bots: S.create.bots }); });
+    syncCreate();
+  }
+
   async function boot() {
     HUD.init(); HUD.onLeave = leaveToMenu;
     $$('.ico-slot[data-icon]').forEach(s => { s.innerHTML = Art.icon(s.dataset.icon, 20); });
@@ -257,13 +271,13 @@ const UI = (() => {
     initDraw(); initSkills(); initHero();
     Render.init($('#cv'), $('#mm')); Game.bindInput($('#cv'));
     Game.bindTouch($('#touch'));
-    initControls();
+    initControls(); initCreate();
     $$('[data-go]').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
     $$('.step').forEach(b => b.addEventListener('click', () => go(b.dataset.step)));
     $('#btn-start').addEventListener('click', () => { Sfx.init(); go('draw'); });
     $('#btn-quickplay').addEventListener('click', () => start(S.invite || ''));
     $('#btn-join-room').addEventListener('click', () => { const c = $('#in-room').value.trim(); if (c.length < 3) return showError('Room codes are 3–10 letters or numbers.'); start(c); });
-    $('#btn-new-room').addEventListener('click', () => { const c = Array.from({ length: 4 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ'[(Math.random() * 24) | 0]).join(''); $('#in-room').value = c; start(c); });
+    $('#btn-new-room').addEventListener('click', () => { const p = $('#create-panel'); p.hidden = !p.hidden; $('#btn-new-room').setAttribute('aria-expanded', !p.hidden); syncCreate(); });
     $('#in-name').addEventListener('input', (e) => { S.name = e.target.value.slice(0, 14); });
     $('#in-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') start(S.invite || ''); });
     $('#in-room').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#btn-join-room').click(); });

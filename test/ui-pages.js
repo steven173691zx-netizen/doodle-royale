@@ -45,12 +45,24 @@ const getJSON = (u) => new Promise((res, rej) => http.get(u, r => { let b = ''; 
   await ev(`(() => { const w = ['jet','flame','bubble']; const on = [...document.querySelectorAll('.skill-card.is-on')].map(e => e.dataset.id); for (const s of on) if (!w.includes(s)) document.querySelector('.skill-card[data-id="'+s+'"]').click(); for (const s of w) if (!on.includes(s)) document.querySelector('.skill-card[data-id="'+s+'"]').click(); })()`);
   await shotN('P3-skills');
   await ev(`document.getElementById('to-play').click()`); await shotN('P4-play');
-  await ev(`(() => { const i = document.getElementById('in-name'); i.value = 'Nave'; i.dispatchEvent(new Event('input', { bubbles: true })); document.getElementById('in-room').value = 'QA' + Math.floor(Math.random()*9999); document.getElementById('btn-join-room').click(); })()`);
+  await ev(`(() => { const i = document.getElementById('in-name'); i.value = 'Nave'; i.dispatchEvent(new Event('input', { bubbles: true })); document.getElementById('btn-new-room').click(); })()`);
+  await shotN('P4b-create-panel');
+  // host sets 3 players + 5 CPU, creates the room
+  await ev(`(() => { const click = (s, n) => { for (let i = 0; i < n; i++) document.querySelector(s).click(); }; click('#create-panel .stepper[data-k="players"] button[data-d="-1"]', 5); click('#create-panel .stepper[data-k="bots"] button[data-d="1"]', 1); })()`);
+  const sum = await ev(`document.getElementById('cr-sum').textContent`); console.log('create summary:', sum);
+  await ev(`document.getElementById('btn-create-go').click()`);
   for (let i = 0; i < 40 && !(await ev('window.__dr && __dr.G.running')); i++) await sleep(200);
   await shotN('P5-lobby');
-  await ev(`document.getElementById('btn-ready').click()`);
-  let t0 = Date.now(); while (Date.now() - t0 < 25000 && (await ev('__dr.G.phase')) !== 1) await sleep(100);
-  await sleep(4000); await shot('P6-hud');
+  const lob = JSON.parse(await ev(`JSON.stringify({ code: __dr.G.code, room: __dr.G.room, start: !document.getElementById('btn-start-match').hidden, ready: !document.getElementById('btn-ready').hidden, cfg: !document.getElementById('host-cfg').hidden, who: document.getElementById('room-who').textContent })`));
+  console.log('lobby', JSON.stringify(lob));
+  if (!/^[A-Z]{4}$/.test(lob.code) || !lob.start || lob.ready || !lob.cfg || lob.room.max !== 3 || lob.room.bots !== 5) { console.error('HOST LOBBY WRONG'); errors.push('host lobby wrong'); }
+  await sleep(4000);                                   // a custom room must NOT start by itself
+  if ((await ev('__dr.G.phase')) !== 0) { console.error('ROOM AUTO-STARTED'); errors.push('room auto-started'); }
+  await ev(`document.getElementById('btn-start-match').click()`);
+  let t0 = Date.now(); while (Date.now() - t0 < 15000 && (await ev('__dr.G.phase')) !== 1) await sleep(100);
+  console.log('after host start: phase', await ev('__dr.G.phase'), 'fighters', await ev('__dr.G.roster.size'));
+  if ((await ev('__dr.G.phase')) !== 1) { console.error('HOST START FAILED'); errors.push('host start failed'); }
+  await sleep(3000); await shot('P6-hud');
   if (MOBILE) {                                    // real touch: drag the stick, then tap a skill button
     const x0 = await ev('__dr.G.me.x'), y0 = await ev('__dr.G.me.y');
     await cdp('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 90, y: 560, id: 1 }] });

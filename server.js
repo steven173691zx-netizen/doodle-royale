@@ -26,20 +26,21 @@ const MIME = {
 /* ------------------------------------------------------------------ rooms */
 const rooms = new Map();
 let pubCounter = 0;
-function newRoom(code, priv) {
-  const r = new Room(code, priv, { zoneScale: ZONE_SCALE, lobbySeconds: LOBBY_SECONDS, overSeconds: OVER_SECONDS });
+const OPEN_ROOMS = process.env.DR_OPEN_ROOMS === '1';        // tests only: an unknown room code creates an automatic private room
+function newRoom(code, priv, extra) {
+  const r = new Room(code, priv, Object.assign({ zoneScale: ZONE_SCALE, lobbySeconds: LOBBY_SECONDS, overSeconds: OVER_SECONDS }, extra || {}));
   rooms.set(code, r);
   return r;
 }
 function quickRoom() {
   let best = null;
   for (const r of rooms.values()) {
-    if (r.priv || r.humans() >= C.MAX_HUMANS || !r.joinable()) continue;
+    if (r.priv || r.humans() >= r.maxHumans || !r.joinable()) continue;
     if (!best || r.humans() > best.humans()) best = r;
   }
   return best || newRoom('PUB' + (++pubCounter), false);
 }
-function privateRoom(code) { return rooms.get(code) || newRoom(code, true); }
+function freshCode() { for (let i = 0; i < 200; i++) { const c = Array.from({ length: 4 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ'[(Math.random() * 24) | 0]).join(''); if (!rooms.has(c)) return c; } return null; }
 const onlineCount = () => { let n = 0; for (const r of rooms.values()) n += r.humans(); return n; };
 
 /* ------------------------------------------------------------------ http */
@@ -143,8 +144,16 @@ function handle(c, m) {
       const skills = validSkills(m.skills);
       if (!skills) return c.send({ t: 'err', msg: 'Pick three different skills.' });
       const code = String(m.room || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
-      const room = code.length >= 3 ? privateRoom(code) : quickRoom();
-      if (room.humans() >= C.MAX_HUMANS) return c.send({ t: 'err', msg: 'That room is full.' });
+      let room;
+      if (m.create && typeof m.create === 'object') {                         // create a custom room: the creator is the host
+        const nc = freshCode(); if (!nc) return c.send({ t: 'err', msg: 'Server is busy. Try again.' });
+        const players = FBR.clamp(+m.create.players | 0 || 8, 1, C.ROOM_MAX_PLAYERS), bots = FBR.clamp(+m.create.bots | 0, 0, C.ROOM_MAX_TOTAL - players);
+        room = newRoom(nc, true, { manual: true, maxHumans: players, bots });
+      } else if (code.length >= 3) {
+        room = rooms.get(code) || (OPEN_ROOMS ? newRoom(code, true) : null);
+        if (!room) return c.send({ t: 'err', msg: 'No room with that code. Check it, or create a room.' });
+      } else room = quickRoom();
+      if (room.humans() >= room.maxHumans) return c.send({ t: 'err', msg: 'That room is full.' });
       room.addClient(c, { name: sanitizeName(m.name), skills, cls: FBR.C.CLASSES[m.cls] ? m.cls : FBR.C.DEFAULT_CLASS, img: validImg(m.img) ? m.img : null, seed: (Math.random() * 1e9) | 0 });
       break;
     }
@@ -162,6 +171,8 @@ function handle(c, m) {
       break;
     }
     case 'ready': if (c.room) c.room.setReady(c); break;
+    case 'start': if (c.room) c.room.hostStart(c); break;
+    case 'cfg': if (c.room) c.room.hostConfig(c, { players: m.players, bots: m.bots }); break;
     case 'spec': if (c.room && c.f && !c.f.alive) c.room.cycleSpec(c, m.d < 0 ? -1 : 1); break;
     case 'leave': if (c.room) c.room.removeClient(c); break;
     case 'ping': c.send({ t: 'pong', n: m.n | 0 }); break;

@@ -98,6 +98,25 @@ const HUD = (() => {
     el['btn-ready'].lastElementChild.textContent = 'Ready';
     const priv = G.code && !G.code.startsWith('PUB');
     el['btn-invite'].hidden = !priv;
+    syncRoomUI();
+  }
+
+  /* custom rooms: code, headcount, host controls (start, players, CPUs) */
+  function humansIn() { let n = 0; for (const r of G.roster.values()) if (!r.b) n++; return n; }
+  function syncRoomUI() {
+    const R = G.room || { m: 0 }, manual = !!R.m, host = manual && R.host === G.id;
+    el['room-box'].hidden = !manual; el['lobby-count-wrap'].hidden = manual; el['btn-ready'].hidden = manual;
+    el['btn-copy-code'].hidden = !manual; el['btn-start-match'].hidden = !host; el['host-cfg'].hidden = !host;
+    if (!manual) return;
+    el['lobby-kicker'].textContent = host ? 'You are the host' : 'Waiting room';
+    el['room-code'].textContent = G.code;
+    const n = humansIn();
+    el['room-who'].textContent = `${n} / ${R.max} players · ${R.bots} CPU · ${n + R.bots} fighters`;
+    el['hc-players'].textContent = R.max; el['hc-bots'].textContent = R.bots;
+    el['lobby-sub'].textContent = host ? 'Share the code. Start whenever you are ready.' : 'Waiting for the host to start the match.';
+    el['btn-start-match'].lastElementChild.textContent = `Start match (${n + R.bots})`;
+    const lim = (k, d) => { const v = (k === 'players' ? R.max : R.bots) + d; return k === 'players' ? v >= Math.max(1, n) && v <= 12 && v + R.bots <= 16 : v >= 0 && R.max + v <= 16; };
+    document.querySelectorAll('#host-cfg .stepper').forEach(s => s.querySelectorAll('button').forEach(b => { b.disabled = !lim(s.dataset.k, +b.dataset.d); }));
   }
 
   function showDead(m) {
@@ -215,7 +234,8 @@ const HUD = (() => {
     const spec = !G.alive && G.phase !== 0 && el['ov-dead'].hidden && el['ov-over'].hidden && !deadTimer;
     el['spec-bar'].hidden = !(spec && (G.dead && G.dead.spectating || G.queued));
     if (!el['spec-bar'].hidden) { const r = G.roster.get(G.specId); el['spec-name'].textContent = r ? r.n : '—'; }
-    if (!el['ov-over'].hidden) el['over-next'].textContent = 'Next round in ' + Math.max(0, G.lobbyT) + 's';
+    if (!el['ov-over'].hidden) el['over-next'].textContent = G.room && G.room.m ? (G.room.host === G.id ? 'You can start the next round from the lobby' : 'The host starts the next round') : 'Next round in ' + Math.max(0, G.lobbyT) + 's';
+    if (!el['ov-lobby'].hidden && G.room && G.room.m) syncRoomUI();
     document.getElementById('game').classList.toggle('is-spec', !G.alive);
   }
 
@@ -225,6 +245,14 @@ const HUD = (() => {
     el['btn-leave'].addEventListener('click', () => { confirmOpen = true; showConn('Leave match?', 'You will give up your spot in this round.', true); });
     el['conn-resume'].addEventListener('click', () => { confirmOpen = false; el['ov-conn'].hidden = true; });
     el['conn-menu'].addEventListener('click', () => { confirmOpen = false; el['ov-conn'].hidden = true; api.onLeave && api.onLeave(); });
+    el['btn-start-match'].addEventListener('click', () => { Sfx.init(); Game.startMatch(); Sfx.play('ui'); });
+    document.querySelectorAll('#host-cfg .stepper button').forEach(b => b.addEventListener('click', () => {
+      const R = G.room, k = b.closest('.stepper').dataset.k, d = +b.dataset.d;
+      Game.configRoom(k === 'players' ? R.max + d : R.max, k === 'bots' ? R.bots + d : R.bots); Sfx.play('ui');
+    }));
+    const copy = async (txt, label, ok, back) => { try { await navigator.clipboard.writeText(txt); el[label].textContent = ok; } catch (e) { el[label].textContent = txt; } setTimeout(() => { el[label].textContent = back; }, 1800); };
+    el['btn-copy-code'].addEventListener('click', () => copy(G.code, 'copy-code-label', 'Copied', 'Copy code'));
+    el['room-code'].addEventListener('click', () => copy(G.code, 'copy-code-label', 'Copied', 'Copy code'));
     el['btn-ready'].addEventListener('click', () => { Sfx.init(); Game.ready(); el['btn-ready'].disabled = true; el['btn-ready'].lastElementChild.textContent = 'Waiting…'; Sfx.play('ui'); });
     el['btn-invite'].addEventListener('click', async () => {
       const url = `${location.origin}/?room=${encodeURIComponent(G.code)}`;
@@ -244,6 +272,7 @@ const HUD = (() => {
       if (k.kid === G.id && k.vid !== G.id) { const n = Math.max(1, k.streak || 1); slam(STREAK[Math.min(5, n)], k.vn + (n > 1 ? '  ·  x' + n : ''), 'ko' + (n > 1 ? ' streak' : '')); }
     };
     H.binds = () => { syncBinds(); document.querySelectorAll('#skill-bar .skill .key').forEach((k, i) => { k.textContent = Game.keyLabel(Game.getBinds()[i]); }); };
+    H.room = () => { if (!el['ov-lobby'].hidden) syncRoomUI(); };
     H.chaos = (kind) => { const c = CHAOS[kind]; if (c) slam(c[0], c[1], 'event', c[2]); };
     H.phase = (ph) => {
       clearTimeout(deadTimer); deadTimer = 0;

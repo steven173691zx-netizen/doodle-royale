@@ -6,9 +6,10 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node test/rules.js && node test/smoke.js",
+    "test": "node test/rules.js && node test/smoke.js && node test/rooms.js",
     "test:rules": "node test/rules.js",
     "test:smoke": "node test/smoke.js",
+    "test:rooms": "node test/rooms.js",
     "bots": "node test/bot-client.js",
     "test:ui": "node test/ui-shot.js",
     "test:load": "node test/load.js"

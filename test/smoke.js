@@ -111,7 +111,7 @@ async function waitFor(fn, ms, label) {
 }
 
 (async () => {
-  const srv = spawn('node', ['server.js'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT), ZONE_SCALE: '0.12', LOBBY_SECONDS: '3', OVER_SECONDS: '3' } });
+  const srv = spawn('node', ['server.js'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT), DR_OPEN_ROOMS: '1', ZONE_SCALE: '0.12', LOBBY_SECONDS: '3', OVER_SECONDS: '3' } });
   let srvLog = '';
   srv.stdout.on('data', d => { srvLog += d; }); srv.stderr.on('data', d => { srvLog += d; process.stderr.write(d); });
   await sleep(700);

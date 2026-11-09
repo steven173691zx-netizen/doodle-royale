@@ -442,5 +442,30 @@ const puIdx = id => PU_IDS.indexOf(id);
   check('Sword + Scribble Burst: every swing damages the target', B.hp <= 9999 - 5 * 24 * 0.8 + 1, `hp=${B.hp.toFixed(1)}`);
 }
 
+/* ---------------------------------------------------------------- custom rooms: host decides */
+{
+  const mk = (opts) => { const room = new Room('HOST', true, Object.assign({ zoneScale: 1, manual: true }, opts)); const cl = () => { const c = mkClient(); return c; };
+    const a = cl(), b = cl(); room.addClient(a, { name: 'Host', skills: ['jet', 'bomb', 'burst'], img: null, seed: 1 }); room.addClient(b, { name: 'Guest', skills: ['jet', 'bomb', 'burst'], img: null, seed: 2 }); return { room, a, b }; };
+  const { room, a, b } = mk({ maxHumans: 5, bots: 3 });
+  for (let i = 0; i < 40 * 60; i++) room.tick();
+  check('Custom room: never starts by itself (waited 60 s)', room.phase === 'lobby');
+  check('Custom room: the first player is the host', room.host === a && room.roomInfo().host === a.f.id);
+  b.f.ready = true; check('Custom room: a guest cannot start it', room.hostStart(b) === false && room.phase === 'lobby');
+  check('Custom room: guests cannot change the settings', room.hostConfig(b, { players: 2, bots: 0 }) === false && room.maxHumans === 5);
+  check('Custom room: host changes players and CPUs (total capped at 16)', room.hostConfig(a, { players: 4, bots: 20 }) && room.maxHumans === 4 && room.botCount === 12, `${room.maxHumans}/${room.botCount}`);
+  room.hostConfig(a, { players: 5, bots: 3 });
+  check('Custom room: players cannot be set below how many already joined', room.hostConfig(a, { players: 1, bots: 3 }) && room.maxHumans === 2, `max=${room.maxHumans}`);
+  room.hostConfig(a, { players: 5, bots: 3 });
+  check('Custom room: host starts it', room.hostStart(a) === true && room.phase === 'live');
+  const bots = [...room.fighters.values()].filter(f => f.bot).length;
+  check('Custom room: exactly the chosen number of CPUs join', bots === 3 && room.fighters.size === 5, `bots=${bots} total=${room.fighters.size}`);
+  room.removeClient(a);
+  check('Custom room: when the host leaves, the next player becomes host', room.host === b && room.roomInfo().host === b.f.id);
+  const r2 = mk({ maxHumans: 2, bots: 0 }); r2.room.hostStart(r2.a); for (let i = 0; i < 40 * 5; i++) r2.room.tick();
+  check('Custom room: 0 CPUs means only real players', [...r2.room.fighters.values()].every(f => !f.bot) && r2.room.fighters.size === 2);
+  const pub = new Room('PUB1', false, { zoneScale: 1, lobbySeconds: 1 }); const pc = mkClient(); pub.addClient(pc, { name: 'P', skills: ['jet', 'bomb', 'burst'], img: null, seed: 3 });
+  check('Public rooms are unchanged (automatic, no host)', !pub.manual && pub.host === null && pub.hostStart(pc) === false);
+}
+
 console.log(failed ? `\n${failed}/${total} FAILED` : `\nall ${total} rule checks passed`);
 process.exit(failed ? 1 : 0);

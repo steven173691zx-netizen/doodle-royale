@@ -48,6 +48,10 @@ class Room {
     this.zoneScale = opts.zoneScale || 1;
     this.lobbySeconds = opts.lobbySeconds || C.LOBBY_SECONDS;
     this.overSeconds = opts.overSeconds || C.OVER_SECONDS;
+    this.manual = !!opts.manual;                         // custom room: the host starts the match, nothing is automatic
+    this.maxHumans = this.manual ? FBR.clamp(opts.maxHumans | 0 || 8, 1, C.ROOM_MAX_PLAYERS) : C.MAX_HUMANS;
+    this.botCount = this.manual ? FBR.clamp(opts.bots == null ? 4 : opts.bots | 0, 0, C.ROOM_MAX_TOTAL - this.maxHumans) : null;
+    this.host = null;
     this.manualAim = !!opts.manualAim;   // tests only: disable auto-attack so fighters are fully scripted
     this.clients = new Set();
     this.fighters = new Map();
@@ -129,7 +133,7 @@ class Room {
 
   startMatch() {
     this.phase = 'live'; this.time = 0;
-    const nBots = Math.max(0, C.MAX_FIGHTERS - this.fighters.size);
+    const nBots = this.manual ? this.botCount : Math.max(0, C.MAX_FIGHTERS - this.fighters.size);
     const added = [];
     for (let i = 0; i < nBots; i++) added.push(this.makeBot());
     this.buildZone();
@@ -186,6 +190,7 @@ class Room {
     f.client = c; c.f = f; c.room = this; c.specId = 0;
     this.clients.add(c);
     this.fighters.set(f.id, f);
+    if (this.manual && !this.host) this.host = c;
     if (this.clients.size === 1 && this.phase !== 'lobby') this.enterLobby();
     if (this.phase === 'lobby') {
       this.placeLobby(f);
@@ -195,9 +200,10 @@ class Room {
     } else { f.alive = false; f.queued = true; }
     c.send({
       t: 'hello', id: f.id, code: this.code, ph: PHASE[this.phase], queued: f.queued, lt: Math.ceil(this.lobbyT),
-      obs: this.obsPayload(), roster: [...this.fighters.values()].map(rosterEntry),
+      obs: this.obsPayload(), roster: [...this.fighters.values()].map(rosterEntry), ri: this.roomInfo(),
     });
     for (const o of this.clients) if (o !== c) o.send({ t: 'roster', add: [rosterEntry(f)] });
+    this.pushInfo();
   }
 
   dropIn(f) {
@@ -222,10 +228,26 @@ class Room {
       this.broadcast({ t: 'rm', ids: [f.id] });
     }
     c.f = null; c.room = null;
+    if (this.host === c) this.host = this.clients.values().next().value || null;     // host left: the next player takes over
     if (this.clients.size === 0) { this.fighters.clear(); this.enterLobby(); }
+    else this.pushInfo();
   }
 
   setReady(c) { if (c.f && this.phase === 'lobby') c.f.ready = true; }
+
+  /* ------------------------------------------------------------ custom rooms: host controls */
+  roomInfo() { return { t: 'room', m: this.manual ? 1 : 0, host: this.host && this.host.f ? this.host.f.id : 0, max: this.maxHumans, bots: this.botCount == null ? 0 : this.botCount, hn: this.humans() }; }
+  pushInfo() { if (this.manual) this.broadcast(this.roomInfo()); }
+  hostStart(c) {
+    if (!this.manual || c !== this.host || this.phase !== 'lobby' || this.clients.size === 0) return false;
+    this.startMatch(); return true;
+  }
+  hostConfig(c, cfg) {
+    if (!this.manual || c !== this.host || this.phase !== 'lobby' || !cfg) return false;
+    const players = FBR.clamp(cfg.players | 0 || this.maxHumans, Math.max(1, this.humans()), C.ROOM_MAX_PLAYERS);
+    const bots = FBR.clamp(cfg.bots == null ? this.botCount : cfg.bots | 0, 0, C.ROOM_MAX_TOTAL - players);
+    this.maxHumans = players; this.botCount = bots; this.pushInfo(); return true;
+  }
 
   /* ------------------------------------------------------------ zone */
   zoneStatic() { return { x: 0, y: 0, r: C.ARENA_R, nx: 0, ny: 0, nr: C.ARENA_R, mode: 0, left: 99, stage: 0, dps: 0 }; }
@@ -268,7 +290,9 @@ class Room {
 
     for (const c of this.clients) this.processCmds(c.f, dt);
 
-    if (this.phase === 'lobby') {
+    if (this.phase === 'lobby' && this.manual) {
+      this.lobbyT = 0;                                    // custom rooms wait for the host, no countdown
+    } else if (this.phase === 'lobby') {
       this.lobbyT -= dt;
       let all = true;
       for (const c of this.clients) if (!c.f.ready) { all = false; break; }
@@ -927,7 +951,7 @@ class Room {
     const R = C.VIEW_R;
     const near = (x, y, m) => { const dx = x - vx, dy = y - vy, rr2 = R + (m || 0); return dx * dx + dy * dy <= rr2 * rr2; };
     const s = { t: 's', st: Math.round(this.clock * 1000), ack: f.lastSeq, ph: PHASE[this.phase], al: this.aliveCount(), k: f.kills, pv: f.pve, lv: f.lvl };
-    if (this.phase === 'lobby') s.lt = Math.max(0, Math.ceil(this.lobbyT));
+    if (this.phase === 'lobby') s.lt = this.manual ? 0 : Math.max(0, Math.ceil(this.lobbyT));
     else if (this.phase === 'over') s.lt = Math.max(0, Math.ceil(this.overT));
     if (this.phase === 'live') { s.tm = Math.round(this.time); s.z = this.zoneArr; }
     if (f.alive) {
